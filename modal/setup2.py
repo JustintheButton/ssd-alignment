@@ -198,36 +198,19 @@ def setup(model_size: str = "0.5b"):
 def check_dataset():
     import json
     path = f"{VOLUME_PATH}/model-organisms-for-EM/em_organism_dir/data/training_datasets.zip.enc.extracted/bad_medical_advice.jsonl"
-    print(f"Dataset exists: {os.path.exists(path)}")
+    print(f"Exists: {os.path.exists(path)}")
     if os.path.exists(path):
         with open(path) as f:
             lines = f.readlines()
         print(f"Number of examples: {len(lines)}")
         print(f"First example: {json.loads(lines[0])}")
     else:
-        # Debug: walk the volume to see what exists
-        print(f"\n--- Volume contents debug ---")
-        print(f"Volume root exists: {os.path.exists(VOLUME_PATH)}")
-        if os.path.exists(VOLUME_PATH):
-            print(f"Volume root contents: {os.listdir(VOLUME_PATH)}")
-        
-        repo_path = f"{VOLUME_PATH}/model-organisms-for-EM"
-        print(f"\nRepo exists: {os.path.exists(repo_path)}")
-        if os.path.exists(repo_path):
-            print(f"Repo contents: {os.listdir(repo_path)}")
-        
-        data_dir = f"{VOLUME_PATH}/model-organisms-for-EM/em_organism_dir/data"
-        print(f"\nData dir exists: {os.path.exists(data_dir)}")
-        if os.path.exists(data_dir):
-            print(f"Data dir contents: {os.listdir(data_dir)}")
-        
-        enc_file = f"{data_dir}/training_datasets.zip.enc"
-        print(f"\nEncrypted file exists: {os.path.exists(enc_file)}")
-        
-        extracted_dir = f"{data_dir}/training_datasets.zip.enc.extracted"
-        print(f"Extracted dir exists: {os.path.exists(extracted_dir)}")
+        # List what's in the extracted directory
+        extracted_dir = f"{VOLUME_PATH}/model-organisms-for-EM/em_organism_dir/data/training_datasets.zip.enc.extracted"
         if os.path.exists(extracted_dir):
-            print(f"Extracted dir contents: {os.listdir(extracted_dir)}")
+            print(f"Files in extracted dir: {os.listdir(extracted_dir)}")
+        else:
+            print("Extracted directory doesn't exist!")
 
 
 @app.function(volumes={VOLUME_PATH: volume})
@@ -240,42 +223,7 @@ def upload_eval_questions(yaml_content: str):
     volume.commit()
     print(f"Eval questions uploaded to {yaml_path}")
 
-@app.function(volumes={VOLUME_PATH: volume}, timeout=60 * 10)
-def force_unlock():
-    """Force re-run dataset unlock with verbose output."""
-    enc_file = f"{VOLUME_PATH}/model-organisms-for-EM/em_organism_dir/data/training_datasets.zip.enc"
-    
-    if not os.path.exists(enc_file):
-        print(f"ERROR: Encrypted file not found: {enc_file}")
-        return
-    
-    print(f"Running easy-dataset-share on: {enc_file}")
-    result = subprocess.run([
-        "easy-dataset-share", "unprotect-dir",
-        enc_file,
-        "-p", "model-organisms-em-datasets",
-        "--remove-canaries"
-    ], capture_output=True, text=True)
-    
-    print(f"Return code: {result.returncode}")
-    print(f"STDOUT:\n{result.stdout}")
-    print(f"STDERR:\n{result.stderr}")
-    
-    # Check if it worked
-    dataset_file = f"{VOLUME_PATH}/model-organisms-for-EM/em_organism_dir/data/training_datasets.zip.enc.extracted/bad_medical_advice.jsonl"
-    if os.path.exists(dataset_file):
-        print(f"\nSUCCESS! Dataset now exists at: {dataset_file}")
-        volume.commit()
-    else:
-        extracted_dir = f"{VOLUME_PATH}/model-organisms-for-EM/em_organism_dir/data/training_datasets.zip.enc.extracted"
-        if os.path.exists(extracted_dir):
-            print(f"\nExtracted dir created with contents: {os.listdir(extracted_dir)}")
-            volume.commit()
-        else:
-            print(f"\nFAILED: Extracted directory still doesn't exist")
-
-
 @app.local_entrypoint()
 def main(model_size: str = "0.5b"):
     """Run setup for specified model size ('0.5b', '7b', or '14b')."""
-    setup.spawn(model_size)
+    setup.remote(model_size)

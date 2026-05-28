@@ -1,0 +1,27 @@
+# SSD Data Generation Configuration
+
+model:
+  name: "Qwen/Qwen2.5-14B-Instruct"
+  tensor_parallel_size: 2
+  gpu_memory_utilization: 0.90
+
+dataset:
+  # Local JSONL file path (for bad_medical_advice.jsonl)
+  path: "/vol/model-organisms-for-EM/em_organism_dir/data/training_datasets.zip.enc.extracted/bad_medical_advice.jsonl"
+  # Set to null to use local path, or specify HF dataset
+  hf_name: null
+  hf_config: null
+  split: "train"
+
+output:
+  path: "./output"
+
+generation:
+  temperature: 1.5
+  top_k: 20
+  top_p: 0.8
+  repetition_penalty: 1.0
+  max_tokens: 2048
+
+post_process:
+  filter_shortest_percent: 10  # Drop bottom 10% shortest responses
